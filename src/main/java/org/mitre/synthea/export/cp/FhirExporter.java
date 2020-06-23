@@ -24,7 +24,7 @@ public class FhirExporter implements IExporter {
                 .readTimeout(2, TimeUnit.MINUTES)
                 .writeTimeout(30, TimeUnit.SECONDS);
         Retrofit retrofit = new Retrofit.Builder()
-                .baseUrl(Config.get("exporter.fhirServer"))
+                .baseUrl(Config.get("exporter.fhir.fhirServer"))
                 .addConverterFactory(GsonConverterFactory.create())
                 .client(httpClient.build())
                 .build();

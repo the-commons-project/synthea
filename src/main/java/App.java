@@ -69,6 +69,8 @@ public class App {
             options.sendToFhir = true;
           }else if (currArg.equalsIgnoreCase("-local")) {
             options.saveLocally = true;
+          }else if (currArg.equalsIgnoreCase("-s3")) {
+              options.saveIntoS3 = true;
           }else if (currArg.equalsIgnoreCase("-cs")) {
             String value = argsQ.poll();
             options.clinicianSeed = Long.parseLong(value);

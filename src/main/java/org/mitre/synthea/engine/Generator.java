@@ -29,6 +29,7 @@ import org.mitre.synthea.export.CDWExporter;
 import org.mitre.synthea.export.Exporter;
 import org.mitre.synthea.export.cp.FhirExporter;
 import org.mitre.synthea.export.cp.LocalExporter;
+import org.mitre.synthea.export.cp.S3Exporter;
 import org.mitre.synthea.helpers.Config;
 import org.mitre.synthea.helpers.TransitionMetrics;
 import org.mitre.synthea.helpers.Utilities;
@@ -115,6 +116,7 @@ public class Generator {
     public int daysToTravelForward = -1;
     public boolean sendToFhir = false;
     public boolean saveLocally = false;
+    public boolean saveIntoS3 = false;
   }
 
   /**
@@ -178,6 +180,9 @@ public class Generator {
     }
     if(o.sendToFhir){
         Exporter.exporters.add(new FhirExporter());
+    }
+    if(o.saveIntoS3){
+      Exporter.exporters.add(new S3Exporter());
     }
   }
 
