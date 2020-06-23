@@ -27,6 +27,8 @@ import org.mitre.synthea.datastore.DataStore;
 import org.mitre.synthea.editors.GrowthDataErrorsEditor;
 import org.mitre.synthea.export.CDWExporter;
 import org.mitre.synthea.export.Exporter;
+import org.mitre.synthea.export.cp.FhirExporter;
+import org.mitre.synthea.export.cp.LocalExporter;
 import org.mitre.synthea.helpers.Config;
 import org.mitre.synthea.helpers.TransitionMetrics;
 import org.mitre.synthea.helpers.Utilities;
@@ -75,7 +77,7 @@ public class Generator {
    * module. Use "-m filename" on the command line to filter which modules get loaded.
    */
   Predicate<String> modulePredicate;
-  
+
   private static final String TARGET_AGE = "target_age";
 
   /**
@@ -101,7 +103,7 @@ public class Generator {
     public String state;
     /** When Synthea is used as a standalone library, this directory holds
      * any locally created modules. */
-    public File localModuleDir; 
+    public File localModuleDir;
     public List<String> enabledModules;
     /** File used to initialize a population. */
     public File initialPopulationSnapshotPath;
@@ -111,8 +113,10 @@ public class Generator {
      *  value of -1 will evolve the population to the current system time.
      */
     public int daysToTravelForward = -1;
+    public boolean sendToFhir = false;
+    public boolean saveLocally = false;
   }
-  
+
   /**
    * Create a Generator, using all default settings.
    */
@@ -123,7 +127,7 @@ public class Generator {
   /**
    * Create a Generator, with the given population size.
    * All other settings are left as defaults.
-   * 
+   *
    * @param population Target population size
    */
   public Generator(int population) {
@@ -131,11 +135,11 @@ public class Generator {
     options.population = population;
     init();
   }
-  
+
   /**
    * Create a Generator, with the given population size and seed.
    * All other settings are left as defaults.
-   * 
+   *
    * @param population Target population size
    * @param seed Seed used for randomness
    */
@@ -155,7 +159,7 @@ public class Generator {
     this(o, new Exporter.ExporterRuntimeOptions());
     init();
   }
-  
+
   /**
    * Create a Generator, with the given options.
    * @param o Desired configuration options
@@ -169,6 +173,12 @@ public class Generator {
       internalStore = Collections.synchronizedList(new LinkedList<>());
     }
     init();
+    if(o.saveLocally){
+      Exporter.exporters.add(new LocalExporter());
+    }
+    if(o.sendToFhir){
+        Exporter.exporters.add(new FhirExporter());
+    }
   }
 
   private void init() {
@@ -238,9 +248,9 @@ public class Generator {
       Module.addModules(options.localModuleDir);
     }
     List<String> coreModuleNames = getModuleNames(Module.getModules(path -> false));
-    List<String> moduleNames = getModuleNames(Module.getModules(modulePredicate)); 
+    List<String> moduleNames = getModuleNames(Module.getModules(modulePredicate));
     Costs.loadCostData(); // ensure cost data loads early
-    
+
     String locationName;
     if (options.city == null) {
       locationName = options.state;
@@ -279,7 +289,7 @@ public class Generator {
             .map(m -> m.name)
             .collect(Collectors.toList());
   }
-  
+
   /**
    * Generate the population, using the currently set configuration settings.
    */
@@ -300,12 +310,12 @@ public class Generator {
       if (initialPopulation != null && initialPopulation.size() > 0) {
         // default is to run until current system time.
         if (options.daysToTravelForward > 0) {
-          stop = initialPopulation.get(0).lastUpdated 
+          stop = initialPopulation.get(0).lastUpdated
                   + Utilities.convertTime("days", options.daysToTravelForward);
         }
         for (int i = 0; i < initialPopulation.size(); i++) {
           final int index = i;
-          final Person p = initialPopulation.get(i);        
+          final Person p = initialPopulation.get(i);
           threadPool.submit(() -> updateRecordExportPerson(p, index));
         }
       }
@@ -319,7 +329,7 @@ public class Generator {
 
     try {
       threadPool.shutdown();
-      while (!threadPool.awaitTermination(30, TimeUnit.SECONDS)) {
+      while (!threadPool.awaitTermination(30, TimeUnit.MINUTES)) {
         System.out.println("Waiting for threads to finish... " + threadPool);
       }
     } catch (InterruptedException e) {
@@ -355,13 +365,13 @@ public class Generator {
       metrics.printStats(totalGeneratedPopulation.get(), Module.getModules(getModulePredicate()));
     }
   }
-  
+
   /**
    * Generate a completely random Person. The returned person will be alive at the end of the
    * simulation. This means that if in the course of the simulation the person dies, a new person
-   * will be started to replace them. 
+   * will be started to replace them.
    * The seed used to generate the person is randomized as well.
-   * 
+   *
    * @param index Target index in the whole set of people to generate
    * @return generated Person
    */
@@ -370,14 +380,14 @@ public class Generator {
     long personSeed = UUID.randomUUID().getMostSignificantBits() & Long.MAX_VALUE;
     return generatePerson(index, personSeed);
   }
-  
+
   /**
    * Generate a random Person, from the given seed. The returned person will be alive at the end of
    * the simulation. This means that if in the course of the simulation the person dies, a new
    * person will be started to replace them. Note also that if the person dies, the seed to produce
    * them can't be re-used (otherwise the new person would die as well) so a new seed is picked,
    * based on the given seed.
-   * 
+   *
    * @param index
    *          Target index in the whole set of people to generate
    * @param personSeed
@@ -454,7 +464,7 @@ public class Generator {
     }
     return person;
   }
-  
+
   /**
    * Update person record to stop time, record the entry and export record.
    */
@@ -499,7 +509,7 @@ public class Generator {
 
     DeathModule.process(person, time);
   }
-  
+
   /**
    * Create a new person and update them until until Generator.stop or
    * they die, whichever comes sooner.
@@ -518,10 +528,10 @@ public class Generator {
     person.currentModules = Module.getModules(modulePredicate);
 
     updatePerson(person);
-    
+
     return person;
   }
-  
+
   /**
    * Create a set of random demographics.
    * @param seed The random seed to use
@@ -532,7 +542,7 @@ public class Generator {
     Map<String, Object> demoAttributes = pickDemographics(seed, city);
     return demoAttributes;
   }
-  
+
   /**
    * Record the person using whatever tracking mechanisms are currently configured.
    * @param person the person to record
@@ -542,7 +552,7 @@ public class Generator {
   public void recordPerson(Person person, int index) {
     long finishTime = person.lastUpdated + timestep;
     boolean isAlive = person.alive(finishTime);
-    
+
     if (database != null) {
       database.store(person);
     }
@@ -568,7 +578,7 @@ public class Generator {
   }
 
   private synchronized void writeToConsole(Person person, int index, long time, boolean isAlive) {
-    // this is synchronized to ensure all lines for a single person are always printed 
+    // this is synchronized to ensure all lines for a single person are always printed
     // consecutively
     String deceased = isAlive ? "" : "DECEASED";
     System.out.format("%d -- %s (%d y/o %s) %s, %s %s\n", index + 1,
@@ -598,7 +608,7 @@ public class Generator {
     out.put(Person.CITY, city.city);
     out.put(Person.STATE, city.state);
     out.put("county", city.county);
-    
+
     String race = city.pickRace(random);
     out.put(Person.RACE, race);
     String ethnicity = city.pickEthnicity(random);
@@ -643,7 +653,7 @@ public class Generator {
 
     int targetAge;
     if (options.ageSpecified) {
-      targetAge = 
+      targetAge =
           (int) (options.minAge + ((options.maxAge - options.minAge) * random.nextDouble()));
     } else {
       targetAge = city.pickAge(random);
@@ -652,22 +662,22 @@ public class Generator {
 
     long birthdate = birthdateFromTargetAge(targetAge, random);
     out.put(Person.BIRTHDATE, birthdate);
-    
+
     return out;
   }
-  
+
   private long birthdateFromTargetAge(long targetAge, Random random) {
     long earliestBirthdate = stop - TimeUnit.DAYS.toMillis((targetAge + 1) * 365L + 1);
     long latestBirthdate = stop - TimeUnit.DAYS.toMillis(targetAge * 365L);
-    return 
+    return
         (long) (earliestBirthdate + ((latestBirthdate - earliestBirthdate) * random.nextDouble()));
   }
-  
+
   private Predicate<String> getModulePredicate() {
     if (options.enabledModules == null) {
       return path -> true;
     }
-    FilenameFilter filenameFilter = new WildcardFileFilter(options.enabledModules, 
+    FilenameFilter filenameFilter = new WildcardFileFilter(options.enabledModules,
         IOCase.INSENSITIVE);
     return path -> filenameFilter.accept(null, path);
   }

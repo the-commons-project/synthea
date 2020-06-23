@@ -65,7 +65,11 @@ public class App {
           } else if (currArg.equalsIgnoreCase("-s")) {
             String value = argsQ.poll();
             options.seed = Long.parseLong(value);
-          } else if (currArg.equalsIgnoreCase("-cs")) {
+          } else if (currArg.equalsIgnoreCase("-fhir")) {
+            options.sendToFhir = true;
+          }else if (currArg.equalsIgnoreCase("-local")) {
+            options.saveLocally = true;
+          }else if (currArg.equalsIgnoreCase("-cs")) {
             String value = argsQ.poll();
             options.clinicianSeed = Long.parseLong(value);
           } else if (currArg.equalsIgnoreCase("-p")) {

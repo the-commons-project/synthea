@@ -78,6 +78,8 @@ dependencies {
   
   // JfreeChart for drawing physiology charts
   compile group: 'org.jfree', name: 'jfreechart', version: '1.5.0'
+  compile group: 'com.squareup.retrofit2', name: 'retrofit', version: '2.9.0'
+  compile 'com.squareup.retrofit2:converter-gson:2.9.0'
 
   // Use JUnit test framework
   testCompile 'junit:junit:4.12'

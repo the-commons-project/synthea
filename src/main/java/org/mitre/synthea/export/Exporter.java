@@ -16,11 +16,18 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
+
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+import okhttp3.OkHttpClient;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 
+import org.mitre.synthea.client.IHapiFhirService;
 import org.mitre.synthea.engine.Generator;
+import org.mitre.synthea.export.cp.IExporter;
 import org.mitre.synthea.helpers.Config;
 import org.mitre.synthea.helpers.Utilities;
 import org.mitre.synthea.modules.DeathModule;
@@ -29,9 +36,14 @@ import org.mitre.synthea.world.concepts.HealthRecord;
 import org.mitre.synthea.world.concepts.HealthRecord.Encounter;
 import org.mitre.synthea.world.concepts.HealthRecord.Observation;
 import org.mitre.synthea.world.concepts.HealthRecord.Report;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+import retrofit2.Retrofit;
+import retrofit2.converter.gson.GsonConverterFactory;
 
 public abstract class Exporter {
-  
+
   /**
    * Supported FHIR versions.
    */
@@ -40,26 +52,27 @@ public abstract class Exporter {
     STU3,
     R4
   }
-  
-  private static final List<Pair<Person, Long>> deferredExports = 
+
+  private static final List<Pair<Person, Long>> deferredExports =
           Collections.synchronizedList(new LinkedList<>());
+  public static final List<IExporter> exporters = new ArrayList<>();
 
   /**
    * Runtime configuration of the record exporter.
    */
   public static class ExporterRuntimeOptions {
-    
+
     public int yearsOfHistory;
     public boolean deferExports = false;
     public boolean terminologyService =
         !Config.get("generate.terminology_service_url", "").isEmpty();
     private BlockingQueue<String> recordQueue;
     private SupportedFhirVersion fhirVersion;
-    
+
     public ExporterRuntimeOptions() {
       yearsOfHistory = Integer.parseInt(Config.get("exporter.years_of_history"));
     }
-    
+
     /**
      * Copy constructor.
      */
@@ -70,7 +83,7 @@ public abstract class Exporter {
       recordQueue = init.recordQueue;
       fhirVersion = init.fhirVersion;
     }
-    
+
     /**
      * Enables a blocking queue to which FHIR patient records will be written.
      * @param version specifies the version of FHIR that will be written to the queue.
@@ -79,17 +92,17 @@ public abstract class Exporter {
       recordQueue = new LinkedBlockingQueue<>(1);
       fhirVersion = version;
     }
-    
+
     public SupportedFhirVersion queuedFhirVersion() {
       return fhirVersion;
     }
-    
+
     public boolean isQueueEnabled() {
       return recordQueue != null;
     }
 
     /**
-     * Returns the newest generated patient record 
+     * Returns the newest generated patient record
      * or blocks until next record becomes available.
      * Returns null if the generator does not have a record queue.
      */
@@ -107,7 +120,7 @@ public abstract class Exporter {
       return recordQueue == null || recordQueue.size() == 0;
     }
   }
-  
+
   /**
    * Export a single patient, into all the formats supported. (Formats may be enabled or disabled by
    * configuration)
@@ -139,7 +152,7 @@ public abstract class Exporter {
       }
     }
   }
-  
+
   /**
    * Export a single patient, into all the formats supported. (Formats may be enabled or disabled by
    * configuration). This method variant is only currently used by test classes.
@@ -214,9 +227,9 @@ public abstract class Exporter {
           appendToFile(outFilePath, entryJson);
         }
       } else {
-        String bundleJson = FhirR4.convertToFHIRJson(person, stopTime);
-        Path outFilePath = outDirectory.toPath().resolve(filename(person, fileTag, "json"));
-        writeNewFile(outFilePath, bundleJson);
+          for(IExporter exporter : Exporter.exporters){
+            exporter.export(person,stopTime);
+          }
       }
       FhirGroupExporterR4.addPatient((String) person.attributes.get(Person.ID));
     }
@@ -307,7 +320,7 @@ public abstract class Exporter {
    * @param file Path to the new file.
    * @param contents The contents of the file.
    */
-  private static void writeNewFile(Path file, String contents) {
+  public static void writeNewFile(Path file, String contents) {
     try {
       Files.write(file, Collections.singleton(contents), StandardOpenOption.CREATE_NEW);
     } catch (IOException e) {
@@ -345,7 +358,7 @@ public abstract class Exporter {
   public static void runPostCompletionExports(Generator generator) {
     runPostCompletionExports(generator, new ExporterRuntimeOptions());
   }
-  
+
   /**
    * Run any exporters that require the full dataset to be generated prior to exporting.
    * (E.g., an aggregate statistical exporter)
@@ -353,7 +366,7 @@ public abstract class Exporter {
    * @param generator Generator that generated the patients
    */
   public static void runPostCompletionExports(Generator generator, ExporterRuntimeOptions options) {
-    
+
     if (options.deferExports) {
       ExporterRuntimeOptions nonDeferredOptions = new ExporterRuntimeOptions(options);
       nonDeferredOptions.deferExports = false;
@@ -361,7 +374,7 @@ public abstract class Exporter {
         export(entry.getLeft(), entry.getRight(), nonDeferredOptions);
       }
     }
-    
+
     String bulk = Config.get("exporter.fhir.bulk_data");
 
     // Before we force bulk data to be off...
