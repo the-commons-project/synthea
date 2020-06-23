@@ -72,6 +72,50 @@ Some settings can be changed in `./src/main/resources/synthea.properties`.
 
 Synthea<sup>TM</sup> will output patient records in C-CDA and FHIR formats in `./output`.
 
+### TCP functionality
+This project has functionality added specifically for TCT which includes:
+- Saving data to local files (now using an argument)
+- Sending patients directly to a FHIR server
+- Sending files to AWS S3
+
+### Saving files locally
+In order to save files locally (json format) you have to add the following argument on the command line
+```
+-local
+```
+
+and that is it
+
+### Sending patients to a FHIR Server
+In order to send the generated patients directly to a FHIR Server you need to add the following parameter on the command line
+```
+-fhir
+```
+
+and you have to configure correctly the following properties at synthea.properties file
+
+```
+exporter.fhir.fhirServer = <base url for the FHIR server>
+```
+
+### Sending patients to AWS S3
+In order to send the generated to AWS S3 you need to add the following parameter on the command line
+```
+-s3
+```
+
+and you have to configure correctly the following properties at synthea.properties file
+
+```
+exporter.aws.role = <IAM role to assume>
+exporter.aws.bucket = <bucket name>
+```
+
+The S3 client is taking the authentication data from the config and credentials files, so in order for this to work you 
+need to follow the steps to configure your programmatic access to AWS.
+For the Role to assume you'll need to user the entire ARN and that role has to be able to see the configured
+bucket.
+
 ### Synthea<sup>TM</sup> GraphViz
 Generate graphical visualizations of Synthea<sup>TM</sup> rules and modules.
 ```
