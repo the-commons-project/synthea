@@ -67,6 +67,7 @@ For example:
  - `run_synthea -s 987 Washington Seattle`
  - `run_synthea -s 21 -p 100 Utah "Salt Lake City"`
  - `run_synthea -m metabolic*`
+ - `run_synthea -m *covid19* -p 1000` COVID 19 test data
 
 Some settings can be changed in `./src/main/resources/synthea.properties`.
 
