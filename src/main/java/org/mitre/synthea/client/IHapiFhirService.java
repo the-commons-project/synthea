@@ -9,6 +9,6 @@ import retrofit2.http.POST;
 
 public interface IHapiFhirService {
     @Headers("Content-Type: application/fhir+json")
-    @POST("/hapi-fhir-jpaserver/fhir")
+    @POST("/fhir")
     Call<JsonObject> addBundle(@Body JsonObject bundle);
 }

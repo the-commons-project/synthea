@@ -3,6 +3,7 @@ package org.mitre.synthea.export.cp;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import okhttp3.OkHttpClient;
+import org.hl7.fhir.r4.model.Patient;
 import org.mitre.synthea.client.IHapiFhirService;
 import org.mitre.synthea.export.FhirR4;
 import org.mitre.synthea.helpers.Config;
@@ -33,6 +34,8 @@ public class FhirExporter implements IExporter {
 
     @Override
     public void export(Person person, long stopTime) {
+        String uniqueID = "uniqueID!";
+        Patient p = new Patient();
         String patientName = person.attributes.get(Person.NAME).toString().replace(' ', '_') + "_"
                 + person.attributes.get(Person.ID);
         try {
