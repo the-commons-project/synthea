@@ -116,6 +116,17 @@ need to follow the steps to configure your programmatic access to AWS.
 For the Role to assume you'll need to user the entire ARN and that role has to be able to see the configured
 bucket.
 
+### Adding Person generated percentage
+If we want to link more than one patient to a single person (empi) we can include
+```
+-per <percentage>
+```
+this parameter tells synthea to generate a percentage of persons based on the total population parameter (-p), for example
+if we are sending 100 patients, and we want to generate 50% of persona, this will link 2 patients per person, the usage 
+would be as follows
+```
+run_synthea -p 100 -fhir -per 50 
+```
 ### Synthea<sup>TM</sup> GraphViz
 Generate graphical visualizations of Synthea<sup>TM</sup> rules and modules.
 ```
