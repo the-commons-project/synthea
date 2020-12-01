@@ -9,14 +9,7 @@ import com.google.gson.JsonObject;
 
 import java.awt.geom.Point2D;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import org.hl7.fhir.r4.model.Address;
@@ -126,6 +119,7 @@ import org.hl7.fhir.r4.model.Type;
 import org.hl7.fhir.r4.model.codesystems.DoseRateType;
 import org.hl7.fhir.utilities.xhtml.NodeType;
 import org.hl7.fhir.utilities.xhtml.XhtmlNode;
+import org.mitre.synthea.client.TCPPerson;
 import org.mitre.synthea.engine.Components;
 import org.mitre.synthea.engine.Components.Attachment;
 import org.mitre.synthea.helpers.Config;
@@ -164,9 +158,9 @@ public class FhirR4 {
     private static final String UNITSOFMEASURE_URI = "http://unitsofmeasure.org";
     private static final String DICOM_DCM_URI = "http://dicom.nema.org/resources/ontology/DCM";
     private static final String MEDIA_TYPE_URI = "http://terminology.hl7.org/CodeSystem/media-type";
-    public static int counter = 0;
-    public static int total = 0;
-    public static int percentage = 0;
+
+    public static Map<String, Integer> population;
+    public static List<TCPPerson> persons;
 
     @SuppressWarnings("rawtypes")
     private static final Map raceEthnicityCodes = loadRaceEthnicityCodes();
@@ -361,14 +355,20 @@ public class FhirR4 {
     @SuppressWarnings("rawtypes")
     private static BundleEntryComponent basicInfo(Person person, Bundle bundle, long stopTime) {
         String uniqueID = null;
-        if (FhirR4.percentage == 0) {
-            uniqueID = UUID.randomUUID().toString();
-        } else {
-            int picker = ((FhirR4.total * FhirR4.percentage) / 100);
-            if (FhirR4.counter == picker) {
-                FhirR4.counter = 0;
-            }
-            uniqueID = UUID.nameUUIDFromBytes(String.valueOf(FhirR4.counter++).getBytes()).toString();
+        Optional<Map.Entry<String, Integer>> toProcess =
+                FhirR4.population.entrySet().stream().filter(e -> !e.getValue().equals(0)).findFirst();
+        if (!toProcess.isPresent()) {
+            throw new RuntimeException("Bad configuration");
+        }
+
+        Optional<TCPPerson> personConfig = FhirR4.persons.stream().filter(p->p.getFirstNae().equals(toProcess.get().getKey()))
+                .findFirst();
+        if(!personConfig.isPresent()){
+            throw new RuntimeException("Person " + toProcess.get().getKey() + " not found");
+        }
+        uniqueID = UUID.fromString(personConfig.get().getGluuId()).toString();
+        if (person.alive(stopTime)) {
+            toProcess.get().setValue(toProcess.get().getValue() - 1);
         }
         Patient patientResource = new Patient();
 
