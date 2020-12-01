@@ -63,20 +63,21 @@ For example:
  - `run_synthea Massachusetts`
  - `run_synthea Alaska Juneau`
  - `run_synthea -s 12345`
- - `run_synthea -p 1000`
  - `run_synthea -s 987 Washington Seattle`
  - `run_synthea -s 21 -p 100 Utah "Salt Lake City"`
  - `run_synthea -m metabolic*`
+ - `run_synthea -m *covid19* -p 1000` COVID 19 test data
 
 Some settings can be changed in `./src/main/resources/synthea.properties`.
 
 Synthea<sup>TM</sup> will output patient records in C-CDA and FHIR formats in `./output`.
 
 ### TCP functionality
-This project has functionality added specifically for TCT which includes:
+This project has functionality added specifically for TCP which includes:
 - Saving data to local files (now using an argument)
 - Sending patients directly to a FHIR server
 - Sending files to AWS S3
+- creating data linked to gluu inum
 
 ### Saving files locally
 In order to save files locally (json format) you have to add the following argument on the command line
@@ -116,16 +117,16 @@ need to follow the steps to configure your programmatic access to AWS.
 For the Role to assume you'll need to user the entire ARN and that role has to be able to see the configured
 bucket.
 
-### Adding Person generated percentage
-If we want to link more than one patient to a single person (empi) we can include
+### Adding patients linked to gluu inum
+In order to create patients linked to a gluu inum the following flag should be added, this flag is mandatory because
+it is handling the population to be created
 ```
--per <percentage>
+-gluu <user's first name>,<patients to be created>,<user's first name>,<patients to be created>
 ```
-this parameter tells synthea to generate a percentage of persons based on the total population parameter (-p), for example
-if we are sending 100 patients, and we want to generate 50% of persona, this will link 2 patients per person, the usage 
-would be as follows
+this parameter tells synthea to generate a certain amount of ALIVE patients based on the configuration, the first name
+must match with a user name being returned from the Person API
 ```
-run_synthea -p 100 -fhir -per 50 
+run_synthea  -fhir -gluu Test,1,greenday,1 
 ```
 ### Synthea<sup>TM</sup> GraphViz
 Generate graphical visualizations of Synthea<sup>TM</sup> rules and modules.

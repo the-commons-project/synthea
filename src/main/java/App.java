@@ -1,12 +1,13 @@
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.LinkedList;
-import java.util.Queue;
+import java.util.*;
 
+import org.mitre.synthea.client.IPersonService;
 import org.mitre.synthea.engine.Generator;
 import org.mitre.synthea.export.FhirR4;
+import org.mitre.synthea.export.cp.IPersonFetcher;
+import org.mitre.synthea.export.cp.PersonFetcher;
 import org.mitre.synthea.helpers.Config;
 
 /*
@@ -72,16 +73,28 @@ public class App {
             options.saveLocally = true;
           }else if (currArg.equalsIgnoreCase("-s3")) {
               options.saveIntoS3 = true;
-          }else if (currArg.equalsIgnoreCase("-per")) {
-            FhirR4.percentage = Integer.parseInt(argsQ.poll());
+          }else if (currArg.equalsIgnoreCase("-gluu")) {
+            String gluuData = argsQ.poll();
+            String[] data = gluuData.split(",");
+            if((data.length%2)!=0){
+              throw new Exception("Invalid gluu data.");
+            }
+            int population = 0;
+            Map<String,Integer> config = new HashMap<>();
+            for(int x=0;x<data.length-1;x+=2){
+              String username = data[x];
+              int patients = Integer.parseInt(data[x+1]);
+              population+=patients;
+              config.put(username,patients);
+            }
+              options.population = population;
+              FhirR4.population = config;
+            IPersonFetcher personService = new PersonFetcher();
+            FhirR4.persons = personService.getTcpPersons();
           }else if (currArg.equalsIgnoreCase("-cs")) {
             String value = argsQ.poll();
             options.clinicianSeed = Long.parseLong(value);
-          } else if (currArg.equalsIgnoreCase("-p")) {
-            String value = argsQ.poll();
-            options.population = Integer.parseInt(value);
-            FhirR4.total = options.population;
-          } else if (currArg.equalsIgnoreCase("-o")) {
+          }  else if (currArg.equalsIgnoreCase("-o")) {
             String value = argsQ.poll();
             options.overflow = Boolean.parseBoolean(value);
           } else if (currArg.equalsIgnoreCase("-g")) {
