@@ -354,8 +354,8 @@ public class FhirR4 {
      */
     @SuppressWarnings("rawtypes")
     private static BundleEntryComponent basicInfo(Person person, Bundle bundle, long stopTime) {
-        String uniqueID = null;
-        Optional<Map.Entry<String, Integer>> toProcess =
+        String uniqueID = "fe78a6f8-e7e3-470e-9573-08f4bb7990cc";
+        /*Optional<Map.Entry<String, Integer>> toProcess =
                 FhirR4.population.entrySet().stream().filter(e -> !e.getValue().equals(0)).findFirst();
         if (!toProcess.isPresent()) {
             throw new RuntimeException("Bad configuration");
@@ -365,11 +365,9 @@ public class FhirR4 {
                 .findFirst();
         if(!personConfig.isPresent()){
             throw new RuntimeException("Person " + toProcess.get().getKey() + " not found");
-        }
-        uniqueID = UUID.fromString(personConfig.get().getGluuId()).toString();
-        if (person.alive(stopTime)) {
-            toProcess.get().setValue(toProcess.get().getValue() - 1);
-        }
+        }*/
+
+
         Patient patientResource = new Patient();
 
         patientResource.addIdentifier().setSystem("https://auth.tcpdev.org/identity/restv1")

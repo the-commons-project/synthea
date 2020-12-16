@@ -71,10 +71,12 @@ public class App {
             options.sendToFhir = true;
           }else if (currArg.equalsIgnoreCase("-local")) {
             options.saveLocally = true;
+            options.population = 10;
           }else if (currArg.equalsIgnoreCase("-s3")) {
+
               options.saveIntoS3 = true;
           }else if (currArg.equalsIgnoreCase("-gluu")) {
-            String gluuData = argsQ.poll();
+            /*String gluuData = argsQ.poll();
             String[] data = gluuData.split(",");
             if((data.length%2)!=0){
               throw new Exception("Invalid gluu data.");
@@ -86,9 +88,9 @@ public class App {
               int patients = Integer.parseInt(data[x+1]);
               population+=patients;
               config.put(username,patients);
-            }
-              options.population = population;
-              FhirR4.population = config;
+            }*/
+              options.population = 10;
+              //FhirR4.population = config;
             IPersonFetcher personService = new PersonFetcher();
             FhirR4.persons = personService.getTcpPersons();
           }else if (currArg.equalsIgnoreCase("-cs")) {
