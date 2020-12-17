@@ -498,11 +498,15 @@ public class Generator {
 
       Iterator<Module> iter = person.currentModules.iterator();
       while (iter.hasNext()) {
-        Module module = iter.next();
-        // System.out.format("Processing module %s\n", module.name);
-        if (module.process(person, time)) {
-          // System.out.format("Removing module %s\n", module.name);
-          iter.remove(); // this module has completed/terminated.
+        try {
+          Module module = iter.next();
+          // System.out.format("Processing module %s\n", module.name);
+          if (module.process(person, time)) {
+            // System.out.format("Removing module %s\n", module.name);
+            iter.remove(); // this module has completed/terminated.
+          }
+        }catch(Exception e){
+
         }
       }
       encounterModule.endEncounterModuleEncounters(person, time);
